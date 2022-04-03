@@ -1,0 +1,53 @@
+// создает observable времени, добавляющий каждую 1 секунду элемент,
+// и добавляет к итоговую потоку значения события
+const time$ =
+  Rx.Observable
+    .timer(0, 1000)
+    .timeInterval()
+    .map(e => e.value);
+// создает observable движения мыши
+// с задержкой 350 миллисекунд
+// и добавляет к итоговую потоку объекты с x и y координатами
+const move$ =
+  Rx.Observable
+    .fromEvent(document, 'mousemove')
+    .throttleTime(350)
+    .map(e => { return {x: e.clientX, y: e.clientY} });
+// объединяет потоки observable времени и observable движения мыши
+// и заканчивает их через 10 секунд
+const source$ =
+  Rx.Observable
+    .merge(time$, move$)
+    .takeUntil(Rx.Observable.timer(10000));
+// подписывается на объединенный source$ observable
+// если значение число, то createTimeset()
+// если значение объект координат, то addPoint()
+const subscription =
+  source$.subscribe(
+    // обработчик события
+    (x) => {
+      if (typeof x === 'number') {
+        createTimeset(x);
+      } else {
+        addPoint(x);
+      }
+    },
+    // обработчик ошибки
+    (err) => { console.warn('Error:', err); },
+    // обработчик завершения
+    () => { console.info('Completed'); }
+  );
+// добавляет элемент в DOM для вывода точек, затронутых в конкретную секунду
+function createTimeset(n) {
+  const elem = document.createElement('div');
+  const num = n + 1;
+  elem.id = 't' + num;
+  elem.innerHTML = `<strong>${num}</strong>: `;
+  document.body.appendChild(elem);
+}
+// добавляет точки, затронутые в конкретную секунду
+function addPoint(pointObj) {
+  // добавляет точки к последнему добавленному элементу
+  const numberElem = document.getElementsByTagName('body')[0].lastChild;
+  numberElem.innerHTML += ` (${pointObj.x}, ${pointObj.y}) `;
+}
